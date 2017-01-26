@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+'''
+A script to produce a .root file summarising the results
+from all spectrum files contained in a directory
+
+Author: Ed Leming
+Date  : 26/01/17
+'''
+import argparse
+import glob
+import os
+import sys
+import utils.file_classes as read
+import utils.utils as utils
+import ROOT
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Reads all spectrum files in a directory and creates histos")
+    parser.add_argument("in_dir", type=str, help="directory containing .spe files to be processed")
+    parser.add_argument("out_dir", type=str, help="directory where summary root file will be created")
+    parser.add_argument("-e", "--extension", type=str, 
+                        help="extension of files to be processed [.Spe]",
+                        default=".Spe")
+    args = parser.parse_args()
+
+    out_dir = utils.check_dir(args.out_dir)
+    fout = ROOT.TFile("{0}/{1}_summary.root".format(out_dir, args.extension[1:]), "recreate")
+    files = glob.glob(os.path.join(args.in_dir, "*{0}".format(args.extension)))
+
+    for file in files:
+        if(args.extension == ".Spe"):
+            data_file = read.SpeFile(file)
+        #########
+        # Add other cases for other file types
+        else:
+            print "No reader available for this file type. You should must add a class to utils/read_files"
+            sys.exit(1)
+
+        # Get data and make spectrum
+        data = data_file.get_data()
+        spectrum = ROOT.TH1D(data_file.get_title(), data_file.get_title(), len(data), 0, len(data)) 
+        for i, x in enumerate(data):
+            spectrum.SetBinContent(i,x)
+        spectrum.Write()
+
+        # Tidy up so root doesn't get confused
+        del spectrum
