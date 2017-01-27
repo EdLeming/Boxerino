@@ -24,9 +24,17 @@ if __name__ == "__main__":
                         default=".Spe")
     args = parser.parse_args()
 
-    out_dir = utils.check_dir(args.out_dir)
-    fout = ROOT.TFile("{0}/{1}_summary.root".format(out_dir, args.extension[1:]), "recreate")
+    # Find all files in passed directory
     files = glob.glob(os.path.join(args.in_dir, "*{0}".format(args.extension)))
+    if files == []:
+        print "No files with extension {0} found in: {1}".format(args.extension, args.in_dir)
+        sys.exit(1)
+
+    # Define name of root file
+    out_dir = utils.check_dir(args.out_dir)
+    dir_name = args.in_dir.split("/")[-1]
+    fname = "{0}{1}_{2}_summary.root".format(out_dir, dir_name,  args.extension[1:])
+    fout = ROOT.TFile("{0}".format(fname), "recreate")
 
     for file in files:
         if(args.extension == ".Spe"):
@@ -46,3 +54,5 @@ if __name__ == "__main__":
 
         # Tidy up so root doesn't get confused
         del spectrum
+
+    print "Generated file: {0}".format(fname)

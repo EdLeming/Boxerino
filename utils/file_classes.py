@@ -43,6 +43,7 @@ class File(object):
         """ Return the name given to the file, minus the path and extension """
         return self._fname.split("/")[-1].replace(".{0}".format(self._extension), "")
 
+
 class SpeFile(File):
     '''A class to read in all information from the .spe files
     kicked out by Boxerino
