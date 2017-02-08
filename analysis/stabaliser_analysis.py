@@ -68,6 +68,8 @@ class DataStructure(object):
         else:
             concentration_field = variables[-2]
             concentration = ".".join(re.findall(r'\d+', concentration_field))
+            # Force correct decimal places
+            concentration = "{0:.2}".format(float(concentration))
         self._conc = concentration
 
         # Sample name
@@ -180,6 +182,7 @@ if __name__ == "__main__":
     for data in data_array:
         data.set_relative_time( data.get_date()-check )
     # Sort by date for nice plotting
+    data_array.sort(key=lambda x: x.get_concentration())
     data_array.sort(key=lambda x: x.get_date())
 
     #######################
@@ -248,11 +251,11 @@ if __name__ == "__main__":
     for iKey in sorted(ids):
         graph = ROOT.TGraph()
         # Set marker style by keys
-        for i, sKey in enumerate(samples):
+        for i, sKey in enumerate(sorted(samples)):
             if ids[iKey][0].get_sample() == sKey:
                graph.SetMarkerStyle(markers[i]) 
         # Set line colour by concentration
-        for i, cKey in enumerate(concentrations):
+        for i, cKey in enumerate(sorted(concentrations)):
             if ids[iKey][0].get_concentration() == cKey:
                 graph.SetLineColor(colors[i])
                 graph.SetMarkerColor(colors[i])
