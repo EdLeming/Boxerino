@@ -310,12 +310,11 @@ if __name__ == "__main__":
     ###############
     # Normalise graphs using LAB offset
     TGraphsNormalised={}
-    point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
     for iKey in sorted(ids):
         if ids[iKey][0].get_concentration() != "":
             TGraphsNormalised[iKey]=TGraphs[iKey].Clone()
-            points = TGraphsNormalised[iKey].GetN()
             for point, data in enumerate(sorted(ids[iKey])):
+                point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
                 TGraphsNormalised[iKey].GetPoint(point, point_x, old_y)
                 if point_x in lab_offset:
                     new_y = old_y*(1+lab_offset[point_x])
@@ -345,3 +344,49 @@ if __name__ == "__main__":
     multiCanNorm.Update()
     multiCanNorm.Write()
     multiCanNorm.SaveAs("./results/EndpointsNorm.png")
+
+    ################
+    # Create relative endpoint vs time plot
+    #
+    # Make a dictionary of initial values for each sample id
+    initial_endpoint={}
+    for iKey in sorted(ids):
+        if iKey!="Pure_LAB":
+            point_x, initial_y = ROOT.Double(0.0),ROOT.Double(0.0)
+            TGraphsNormalised[iKey].GetPoint(0, point_x, initial_y)
+            initial_endpoint[iKey]=initial_y
+
+
+    ################
+    # Divide endpoints by initial values
+    TGraphsRelative={}
+    for iKey in sorted(ids):
+        if ids[iKey][0].get_concentration() != "":
+            TGraphsRelative[iKey]=TGraphsNormalised[iKey].Clone()
+            for point, data in enumerate(sorted(ids[iKey])):
+                point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
+                TGraphsRelative[iKey].GetPoint(point, point_x, old_y)
+                new_y = old_y/initial_endpoint[iKey]
+                TGraphsRelative[iKey].SetPoint(point, point_x, new_y)
+        
+    ################
+    # Create multigraph for normalised endpoint vs time plots
+    multiGraphRel = ROOT.TMultiGraph()
+    multiCanRel = ROOT.TCanvas("TCanvas_Enpoint_vs_date_relative", "multiRel", 1)
+    multiCanRel.SetRightMargin(0.20);
+    for key in sorted(TGraphsRelative):
+        multiGraphRel.Add(TGraphsRelative[key])
+
+    # Format and print
+    multiGraphRel.Draw("apl")
+    multiGraphRel.GetXaxis().SetTitle("Time [days]")
+    multiGraphRel.GetYaxis().SetTitle("Estimated Endpoint [ADC units]")
+    multiGraphRel.SetName("TMulti_Endpoints_vs_time")
+    graph_legend.Draw()
+    multiGraphRel.Write()
+    multiCanRel.Update()
+    multiCanRel.Write()
+    multiCanRel.SaveAs("./results/EndpointsRel.png")
+
+
+    
