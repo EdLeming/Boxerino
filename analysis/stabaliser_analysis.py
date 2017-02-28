@@ -298,13 +298,14 @@ if __name__ == "__main__":
     ################
     # Create normalised endpoint vs time plot
     #
-    # Make a dictionary of relative offsets of LAB from its average
-    lab_offset={}
+    # Make a dictionary of LAB endpoints and its average
+    lab_endpoint={}
+    average_lab = 0.0
     for iKey in sorted(ids): 
         if ids[iKey][0].get_concentration() == "":
             average_lab=TGraphs[iKey].GetMean(2)
             for data in ids[iKey]:
-                lab_offset[data.get_relative_time()] = (average_lab - data.get_endpoint_median())/average_lab
+                lab_endpoint[data.get_relative_time()] = data.get_endpoint_median()
             break
 
     ###############
@@ -316,8 +317,8 @@ if __name__ == "__main__":
             for point, data in enumerate(sorted(ids[iKey])):
                 point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
                 TGraphsNormalised[iKey].GetPoint(point, point_x, old_y)
-                if point_x in lab_offset:
-                    new_y = old_y*(1+lab_offset[point_x])
+                if point_x in lab_endpoint:
+                    new_y = old_y*(average_lab / lab_endpoint[point_x])
                     TGraphsNormalised[iKey].SetPoint(point, point_x, new_y)
                 else:
                     print "No value for pure LAB, cannot normalise."
@@ -380,7 +381,7 @@ if __name__ == "__main__":
     # Format and print
     multiGraphRel.Draw("apl")
     multiGraphRel.GetXaxis().SetTitle("Time [days]")
-    multiGraphRel.GetYaxis().SetTitle("Estimated Endpoint [ADC units]")
+    multiGraphRel.GetYaxis().SetTitle("Relative Endpoint")
     multiGraphRel.SetName("TMulti_Endpoints_vs_time")
     graph_legend.Draw()
     multiGraphRel.Write()
