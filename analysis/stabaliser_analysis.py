@@ -120,10 +120,10 @@ class DataStructure(object):
 
     def get_endpoint_mean(self):
         try:
-            return self._endpoint_median
+            return self._endpoint_mean
         except:
-            _, median = self.estimate_end_point()
-            return median
+            _, mean = self.estimate_end_point()
+            return mean
 
     def get_relative_time(self, units="days"):
         if units == "days":
@@ -265,7 +265,7 @@ if __name__ == "__main__":
                 graph.SetFillStyle(0)
                 graph.SetFillColor(0)
         if ids[iKey][0].get_concentration() == "":
-            legend_str = "Pure LAB-PPO".format(ids[iKey][0].get_concentration(), ids[iKey][0].get_sample())
+            legend_str = "Pure LAB-PPO"
         else:
             legend_str = "{0} molar ratio {1}".format(ids[iKey][0].get_concentration(), ids[iKey][0].get_sample())
         graph_legend.AddEntry(graph, legend_str)
@@ -279,6 +279,7 @@ if __name__ == "__main__":
         this_id =  data.get_id()
         points = TGraphs[this_id].GetN()
         TGraphs[this_id].SetPoint(points, data.get_relative_time(), data.get_endpoint_median())
+
 
     ################
     # Put filled graphs into to a multigraph and draw
@@ -295,3 +296,101 @@ if __name__ == "__main__":
     multiCan.Update()
     multiCan.Write()
     multiCan.SaveAs("./results/Endpoints.png")
+
+    
+    ################
+    # Create normalised endpoint vs time plot
+    #
+    # Make a dictionary of LAB endpoints and its average
+    lab_endpoint={}
+    average_lab = 0.0
+    for iKey in sorted(ids): 
+        if ids[iKey][0].get_concentration() == "":
+            average_lab=TGraphs[iKey].GetMean(2)
+            for data in ids[iKey]:
+                lab_endpoint[data.get_relative_time()] = data.get_endpoint_median()
+            break
+
+    ###############
+    # Normalise graphs using LAB offset
+    TGraphsNormalised={}
+    for iKey in sorted(ids):
+        if ids[iKey][0].get_concentration() != "":
+            TGraphsNormalised[iKey]=TGraphs[iKey].Clone()
+            for point, data in enumerate(sorted(ids[iKey])):
+                point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
+                TGraphsNormalised[iKey].GetPoint(point, point_x, old_y)
+                if point_x in lab_endpoint:
+                    new_y = old_y*(average_lab / lab_endpoint[point_x])
+                    TGraphsNormalised[iKey].SetPoint(point, point_x, new_y)
+                else:
+                    print "No value for pure LAB, cannot normalise."
+        
+    #################
+    # Create multigraph for normalised endpoint vs time plots
+    multiGraphNorm = ROOT.TMultiGraph()
+    multiCanNorm = ROOT.TCanvas("TCanvas_Enpoint_vs_date_normalised", "multiNorm", 1)
+    multiCanNorm.SetRightMargin(0.20);
+    for key in sorted(TGraphsNormalised):
+        multiGraphNorm.Add(TGraphsNormalised[key])
+
+    # Delete pure LAB from the legend
+    graph_legend.GetListOfPrimitives().Last()
+    graph_legend.DeleteEntry()                
+
+    # Format and print
+    multiGraphNorm.Draw("apl")
+    multiGraphNorm.GetXaxis().SetTitle("Time [days]")
+    multiGraphNorm.GetYaxis().SetTitle("Estimated Endpoint [ADC units]")
+    multiGraphNorm.SetName("TMulti_Endpoints_vs_time")
+    graph_legend.Draw()
+    multiGraphNorm.Write()
+    multiCanNorm.Update()
+    multiCanNorm.Write()
+    multiCanNorm.SaveAs("./results/EndpointsNorm.png")
+
+    ################
+    # Create relative endpoint vs time plot
+    #
+    # Make a dictionary of initial values for each sample id
+    initial_endpoint={}
+    for iKey in sorted(ids):
+        if iKey!="Pure_LAB":
+            point_x, initial_y = ROOT.Double(0.0),ROOT.Double(0.0)
+            TGraphsNormalised[iKey].GetPoint(0, point_x, initial_y)
+            initial_endpoint[iKey]=initial_y
+
+
+    ################
+    # Divide endpoints by initial values
+    TGraphsRelative={}
+    for iKey in sorted(ids):
+        if ids[iKey][0].get_concentration() != "":
+            TGraphsRelative[iKey]=TGraphsNormalised[iKey].Clone()
+            for point, data in enumerate(sorted(ids[iKey])):
+                point_x, old_y, new_y = ROOT.Double(0.0), ROOT.Double(0.0),ROOT.Double(0.0)
+                TGraphsRelative[iKey].GetPoint(point, point_x, old_y)
+                new_y = old_y/initial_endpoint[iKey]
+                TGraphsRelative[iKey].SetPoint(point, point_x, new_y)
+        
+    ################
+    # Create multigraph for normalised endpoint vs time plots
+    multiGraphRel = ROOT.TMultiGraph()
+    multiCanRel = ROOT.TCanvas("TCanvas_Enpoint_vs_date_relative", "multiRel", 1)
+    multiCanRel.SetRightMargin(0.20);
+    for key in sorted(TGraphsRelative):
+        multiGraphRel.Add(TGraphsRelative[key])
+
+    # Format and print
+    multiGraphRel.Draw("apl")
+    multiGraphRel.GetXaxis().SetTitle("Time [days]")
+    multiGraphRel.GetYaxis().SetTitle("Relative Endpoint")
+    multiGraphRel.SetName("TMulti_Endpoints_vs_time")
+    graph_legend.Draw()
+    multiGraphRel.Write()
+    multiCanRel.Update()
+    multiCanRel.Write()
+    multiCanRel.SaveAs("./results/EndpointsRel.png")
+
+
+    
